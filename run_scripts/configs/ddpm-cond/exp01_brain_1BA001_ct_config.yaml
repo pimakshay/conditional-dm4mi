@@ -1,0 +1,40 @@
+
+model:
+  target: models.ddpm_conditioned.ConditionDDPM
+  params:
+    dataset:
+      target: diffusion_modules.diffusion_utils.dataloader.load_brain_hdf5
+      params:
+        image_dir: /home/akshay/Documents/cse_sem_5/thesis/PI_diffusionModels/code/cloned/github/conditional-dm4mi/run_scripts/data/brain/1BA001/ct_h5files_64x64_bs_1_s_32
+        noise_type: gaussian
+#         dynamic_range: 3000
+
+    linear_start: 0.0001
+    linear_end: 0.02
+    image_size: &IMG_SIZE 64
+    channels: &IMG_CHANNELS 1 
+    batch_size: 1 
+    timesteps: 1000 # diffusion timesteps
+    max_tsteps: 1e05
+    learning_rate: 2.0e-6 #1.0e-04
+#     warmup_steps: 5000
+    num_of_train_samples: 5
+    num_of_val_samples: 1  
+    loss_type: "huber" #options: 'l1', 'l2' and 'huber'
+    beta_schedule: "linear" # options: linear, cosine, sqrt, sqrt_linear
+    parameterization: "eps" # options: "eps" and "x0"
+    conditioning_key: "concat"
+
+    unet_rosinality_config:
+      target: diffusion_modules.unet_arch.unet_rosinality.Unet
+      params:
+        in_channel: 2 #*IMG_CHANNELS
+        out_channel: 1
+        channel: 64 # model channels
+        channel_multiplier: [1,2,4]
+        n_res_blocks: 2
+        attn_strides: [4]
+        attn_heads: 1
+        use_affine_time: False
+        dropout: 0.1
+        fold: 1

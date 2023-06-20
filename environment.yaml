@@ -1,0 +1,28 @@
+name: dm4mi
+channels:
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.8.5
+  - pip=20.3
+  - pytorch=1.11.0
+  - torchvision=0.12.0
+  - numpy=1.19.2
+  - pip:
+    - pytorch-lightning==1.6.4
+    - omegaconf
+    - einops
+    - torchmetrics==0.6.0
+    - matplotlib==3.1.3
+    - tqdm
+    - tensorboard
+    - pydantic
+    - ipykernel
+    - notebook
+    - SimpleITK==2.0.2
+    - h5py
+    - tifffile
+    - evalutils==0.3.1
+    - scikit-learn==0.24.2
+    - scipy==1.6.3
+    - python-dotenv==1.0.0

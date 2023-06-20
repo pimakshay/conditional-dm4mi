@@ -1,3 +1,16 @@
+# dm4mi ignore list
+*.pyc
+*.idea
+.vscode/*
+_archiv/*
+.DS_store
+*.ipa
+*.log
+*.zip
+run_scripts/data/
+run_scripts/lightning_logs/
+*.ipynb_checkpoints
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
