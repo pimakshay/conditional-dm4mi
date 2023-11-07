@@ -6,7 +6,9 @@ import numpy as np
 from torch.utils.data import random_split
 from diffusion_modules.diffusion_utils import dataloaderDenoise
 from diffusion_modules.diffusion_utils.hdf5dataset import HDF5Dataset
+from diffusion_modules.diffusion_utils.pddpm_dataloader import TrainDataModule, TrainIXIDataModule, get_all_test_dataloaders
 
+# synthrad dataset
 def load_brain_hdf5(image_dir, noise_type="gaussian", dynamic_range=255):
     dataset = HDF5Dataset(image_dir=image_dir, input_transform=transforms.Compose([
 #                               transforms.ToTensor()
@@ -16,6 +18,63 @@ def load_brain_hdf5(image_dir, noise_type="gaussian", dynamic_range=255):
                               dataloaderDenoise.AddNoise("gaussian")
                               ]), dynamic_range=dynamic_range)    
     return dataset, noisy_dataset
+
+# fastmri + ixi dataset
+def load_fastmri(image_dir, noise_type="gaussian", variance=0.01, dynamic_range=255, batch_size=32, target_size=128):
+    train_data_module = TrainDataModule(
+        split_dir=image_dir,
+        target_size=target_size,
+        batch_size=batch_size,
+        input_transform=transforms.Compose([
+#                               transforms.ToTensor(),
+                              dataloaderDenoise.AddNoise("gaussian", var=variance)
+                              ]), 
+        )    
+
+    train_dataset = train_data_module.train_dataloader().dataset
+    noisy_dataset = train_data_module.noisy_train_dataloader().dataset
+#     val_dataset = train_data_module.val_dataloader().dataset
+
+    return train_dataset, noisy_dataset
+
+
+# ixi dataset
+def load_ixi(image_dir, noise_type="gaussian", variance=0.01, dynamic_range=255, batch_size=32, target_size=128):
+    train_data_module = TrainIXIDataModule(
+        split_dir=image_dir,
+        target_size=target_size,
+        batch_size=batch_size,
+        input_transform=transforms.Compose([
+#                               transforms.ToTensor(),
+                              dataloaderDenoise.AddNoise("gaussian", var=variance)
+                              ]), 
+        )    
+
+    train_dataset = train_data_module.train_dataloader().dataset
+    noisy_dataset = train_data_module.noisy_train_dataloader().dataset
+#     val_dataset = train_data_module.val_dataloader().dataset
+
+    return train_dataset, noisy_dataset
+
+
+def load_ixi_sr(image_dir, image_size, scale_factor=1, dynamic_range=255, batch_size=32, target_size=128):
+    lr_data_transform = transforms.Compose([
+        transforms.Resize(int(image_size/scale_factor)), transforms.Resize(image_size),
+        transforms.CenterCrop(image_size),
+#         transforms.ToTensor(), # Scales data into [0,1] 
+    ])     
+    train_data_module = TrainIXIDataModule(
+        split_dir=image_dir,
+        target_size=target_size,
+        batch_size=batch_size,
+        input_SR_transform=lr_data_transform
+        )    
+
+    train_dataset = train_data_module.train_dataloader().dataset
+    lr_dataset = train_data_module.lr_train_dataloader().dataset
+#     val_dataset = train_data_module.val_dataloader().dataset
+
+    return train_dataset, lr_dataset
 
 def get_conditioned_dataloader(dataloader, cond):
     """

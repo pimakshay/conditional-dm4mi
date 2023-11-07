@@ -29,7 +29,7 @@ def rescale_image(image):
     rescaled_img = filter.Execute(image)
     return rescaled_img
 
-def save_as_hdf5(inputpath="", datasetname="", targetdir="", image_size=64, stride=32):
+def save_as_hdf5(inputpath="", datasetname="", targetdir="", image_size=64, stride=32, batch_size=1):
     create_folder(targetdir)
     img = sitk.GetArrayFromImage(rescale_image(sitk.ReadImage(str(inputpath)))) #tifffile.imread(str(opt.image))
 
@@ -38,7 +38,7 @@ def save_as_hdf5(inputpath="", datasetname="", targetdir="", image_size=64, stri
     edge_length = image_size #image dimensions
     stride = stride #stride at which images are extracted
 
-    N = edge_length
+    N = batch_size #edge_length
     M = edge_length
     O = edge_length
 
