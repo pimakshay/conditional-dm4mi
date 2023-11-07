@@ -1,4 +1,4 @@
-name: dm4mi
+name: cdm4mi
 channels:
   - pytorch
   - defaults
