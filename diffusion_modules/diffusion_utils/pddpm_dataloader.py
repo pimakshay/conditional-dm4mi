@@ -4,8 +4,11 @@ from typing import List, Tuple
 import pandas as pd
 import pytorch_lightning as pl
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, ConcatDataset
 from torchvision import transforms
+import torchvision.transforms.functional as TF
+from diffusion_modules.diffusion_utils.transforms_functional import adjust_sharpness_2, autocontrast, hflip
+
 
 
 class TrainDataset(Dataset):
@@ -44,64 +47,71 @@ class TrainDataset(Dataset):
         return img
 
 
-class TrainDataModule(pl.LightningDataModule):
-    def __init__(self, split_dir: str, target_size=(128, 128), batch_size: int = 32, input_transform=None, input_SR_transform=None):
-        """
-        Data module for training
+# class TrainDataModule(pl.LightningDataModule):
+#     def __init__(self, split_dir: str, target_size=(128, 128), batch_size: int = 32, input_transform=None, input_SR_transform=None):
+#         """
+#         Data module for training
 
-        @param split_dir: str
-            path to directory containing the split files
-        @param: target_size: tuple (int, int), default: (128, 128)
-            the desired output size
-        @param: batch_size: int, default: 32
-            batch size
-        """
-        super(TrainDataModule, self).__init__()
-        self.target_size = target_size
-        self.batch_size = batch_size
+#         @param split_dir: str
+#             path to directory containing the split files
+#         @param: target_size: tuple (int, int), default: (128, 128)
+#             the desired output size
+#         @param: batch_size: int, default: 32
+#             batch size
+#         """
+#         super(TrainDataModule, self).__init__()
+#         self.target_size = target_size
+#         self.batch_size = batch_size
 
-        train_csv_ixi = os.path.join(split_dir, 'ixi_normal_train.csv')
-        train_csv_fastMRI = os.path.join(split_dir, 'normal_train.csv')
-        val_csv = os.path.join(split_dir, 'normal_val.csv')
+#         train_csv_ixi = os.path.join(split_dir, 'ixi_normal_train.csv')
+#         train_csv_fastMRI = os.path.join(split_dir, 'normal_train.csv')
+#         val_csv = os.path.join(split_dir, 'normal_val.csv')
 
-        # Load csv files
-        train_files_ixi = pd.read_csv(train_csv_ixi)['filename'].tolist()
-        train_files_fastMRI = pd.read_csv(train_csv_fastMRI)['filename'].tolist()
-        val_files = pd.read_csv(val_csv)['filename'].tolist()
+#         # Load csv files
+#         train_files_ixi = pd.read_csv(train_csv_ixi)['filename'].tolist()
+#         train_files_fastMRI = pd.read_csv(train_csv_fastMRI)['filename'].tolist()
+#         val_files = pd.read_csv(val_csv)['filename'].tolist()
 
-        # Combine files
-        self.train_data = train_files_ixi + train_files_fastMRI # path to all the images
-        self.val_data = val_files # path to all the images
-        self.input_transform = input_transform # noisy transform
-        self.input_SR_transform = input_SR_transform
+#         # Combine files
+#         self.train_data = train_files_ixi + train_files_fastMRI # path to all the images
+#         self.val_data = val_files # path to all the images
+#         self.input_transform = input_transform # noisy transform
+#         self.input_SR_transform = input_SR_transform
 
-        # Logging
-        print(f"Using {len(train_files_ixi)} IXI images "
-              f"and {len(train_files_fastMRI)} fastMRI images for training. "
-              f"Using {len(val_files)} images for validation.")
+#         # Logging
+#         print(f"Using {len(train_files_ixi)} IXI images "
+#               f"and {len(train_files_fastMRI)} fastMRI images for training. "
+#               f"Using {len(val_files)} images for validation.")
 
-    def train_dataloader(self):
+#     def train_dataloader(self):
 #         org_dataset = TrainDataset(self.train_data, self.target_size)
-#         augmented_dataset = 
-#         increased_dataset = torch.utils.data.ConcatDataset([augmented_dataset,org_dataset])
-        return DataLoader(TrainDataset(self.train_data, self.target_size),
-                          batch_size=self.batch_size,
-                          shuffle=True)
+#         lr_flip_dataset = TrainDataset(self.train_data, self.target_size, transforms.RandomHorizontalFlip(p=1))
+#         constrast_dataset_org = TrainDataset(self.train_data, self.target_size, transforms.RandomAutocontrast(p=1))
+#         constrast_dataset_lr = TrainDataset(self.train_data, self.target_size, transforms.RandomAutocontrast(p=1))
+#         increased_dataset = ConcatDataset([org_dataset,lr_flip_dataset,constrast_dataset_org,constrast_dataset_lr])
+#         return DataLoader(increased_dataset,
+#                           batch_size=self.batch_size,
+#                           shuffle=False)
     
-    def noisy_train_dataloader(self):
-        return DataLoader(TrainDataset(self.train_data, self.target_size, self.input_transform),
-                          batch_size=self.batch_size,
-                          shuffle=True)
+#     def noisy_train_dataloader(self):
+#         org_dataset = TrainDataset(self.train_data, self.target_size,self.input_transform)
+#         lr_flip_dataset = TrainDataset(self.train_data, self.target_size, transforms.Compose([transforms.RandomHorizontalFlip(p=1),self.input_transform]))
+#         constrast_dataset_org = TrainDataset(self.train_data, self.target_size, transforms.Compose([transforms.RandomAutocontrast(p=1),self.input_transform]))
+#         constrast_dataset_lr = TrainDataset(self.train_data, self.target_size, transforms.Compose([transforms.RandomAutocontrast(p=1),self.input_transform]))
+#         increased_dataset = ConcatDataset([org_dataset,lr_flip_dataset,constrast_dataset_org,constrast_dataset_lr])        
+#         return DataLoader(increased_dataset,
+#                           batch_size=self.batch_size,
+#                           shuffle=False)
     
-    def lr_train_dataloader(self):
-        return DataLoader(TrainDataset(self.train_data, self.target_size, self.input_SR_transform),
-                          batch_size=self.batch_size,
-                          shuffle=True) 
+#     def lr_train_dataloader(self):
+#         return DataLoader(TrainDataset(self.train_data, self.target_size, self.input_SR_transform),
+#                           batch_size=self.batch_size,
+#                           shuffle=False) 
 
-    def val_dataloader(self):
-        return DataLoader(TrainDataset(self.val_data, self.target_size),
-                          batch_size=self.batch_size,
-                          shuffle=False)
+#     def val_dataloader(self):
+#         return DataLoader(TrainDataset(self.val_data, self.target_size),
+#                           batch_size=self.batch_size,
+#                           shuffle=False)
 
 class TrainIXIDataModule(pl.LightningDataModule):
     def __init__(self, split_dir: str, target_size=(128, 128), batch_size: int = 32, input_transform=None, input_SR_transform=None):
@@ -136,18 +146,98 @@ class TrainIXIDataModule(pl.LightningDataModule):
 
         # Logging
         print(f"Using {len(train_files_ixi)} IXI images ")
-#               f"and {len(train_files_fastMRI)} fastMRI images for training. "
-#               f"Using {len(val_files)} IXI images for validation.")
 
     def train_dataloader(self):
-        return DataLoader(TrainDataset(self.train_data, self.target_size),
-                          batch_size=self.batch_size,
-                          shuffle=False)
-    
+        org_dataset = TrainDataset(self.train_data, self.target_size)
+        lr_flip_dataset = TrainDataset(
+            self.train_data, self.target_size, hflip
+        )
+        constrast_dataset_org = TrainDataset(
+            self.train_data, self.target_size, autocontrast
+        )
+        sharpness_dataset_org = TrainDataset(
+            self.train_data, self.target_size, transforms.Compose([adjust_sharpness_2,])
+        )
+
+        constrast_dataset_lr = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose(
+                [hflip, autocontrast]
+            ),
+        )
+        contrast_sharpness_dataset_lr = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose(
+                [
+                    hflip,
+                    autocontrast,
+                    adjust_sharpness_2,
+                ]
+            ),
+        )
+
+        increased_dataset = ConcatDataset(
+            [
+                constrast_dataset_org,sharpness_dataset_org,constrast_dataset_lr,contrast_sharpness_dataset_lr,lr_flip_dataset,org_dataset,
+            ]
+        )
+        return DataLoader(increased_dataset, batch_size=self.batch_size, shuffle=False)
+
+
     def noisy_train_dataloader(self):
-        return DataLoader(TrainDataset(self.train_data, self.target_size, self.input_transform),
-                          batch_size=self.batch_size,
-                          shuffle=False)    
+        org_dataset = TrainDataset(self.train_data, self.target_size, self.input_transform)
+        lr_flip_dataset = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose(
+                [hflip, self.input_transform]
+            ),
+        )
+        constrast_dataset_org = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose([autocontrast, self.input_transform]),
+        )
+        sharpness_dataset_org = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose([adjust_sharpness_2, self.input_transform]),
+        )
+
+        constrast_dataset_lr = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose(
+                [
+                    hflip,
+                    autocontrast,
+                    self.input_transform,
+                ]
+            ),
+        )
+        contrast_sharpness_dataset_lr = TrainDataset(
+            self.train_data,
+            self.target_size,
+            transforms.Compose(
+                [
+                    hflip,
+                    autocontrast,
+                    adjust_sharpness_2,
+                    self.input_transform,
+                ]
+            ),
+        )
+
+        increased_dataset = ConcatDataset(
+            [
+                constrast_dataset_org,sharpness_dataset_org,constrast_dataset_lr,contrast_sharpness_dataset_lr,lr_flip_dataset,org_dataset,
+            ]
+        )
+        return DataLoader(increased_dataset, batch_size=self.batch_size, shuffle=False)
+
+    
     def lr_train_dataloader(self):
         return DataLoader(TrainDataset(self.train_data, self.target_size, self.input_SR_transform),
                           batch_size=self.batch_size,

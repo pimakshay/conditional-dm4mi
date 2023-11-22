@@ -6,39 +6,46 @@ import numpy as np
 from torch.utils.data import random_split
 from diffusion_modules.diffusion_utils import dataloaderDenoise
 from diffusion_modules.diffusion_utils.hdf5dataset import HDF5Dataset
-from diffusion_modules.diffusion_utils.pddpm_dataloader import TrainDataModule, TrainIXIDataModule, get_all_test_dataloaders
+# from diffusion_modules.diffusion_utils.pddpm_dataloader import TrainIXIDataModule, get_all_test_dataloaders
+from diffusion_modules.diffusion_utils.dataloader_T1 import TrainIXIDataModule, get_all_test_dataloaders
 
-# synthrad dataset
-def load_brain_hdf5(image_dir, noise_type="gaussian", dynamic_range=255):
+
+def load_berea_hdf5(image_dir, dynamic_range=255):
+    dataset = HDF5Dataset(image_dir=image_dir, input_transform=transforms.Compose([
+                              transforms.ToTensor()
+                              ]), dynamic_range=dynamic_range)
+    return dataset
+
+def load_brain_hdf5(image_dir, noise_type="gaussian", variance=0.01, dynamic_range=255):
     dataset = HDF5Dataset(image_dir=image_dir, input_transform=transforms.Compose([
 #                               transforms.ToTensor()
                               ]), dynamic_range=dynamic_range)
     noisy_dataset = HDF5Dataset(image_dir=image_dir, input_transform=transforms.Compose([
 #                               transforms.ToTensor(),
-                              dataloaderDenoise.AddNoise("gaussian")
+                              dataloaderDenoise.AddNoise("gaussian", var=variance)
                               ]), dynamic_range=dynamic_range)    
     return dataset, noisy_dataset
 
-# fastmri + ixi dataset
-def load_fastmri(image_dir, noise_type="gaussian", variance=0.01, dynamic_range=255, batch_size=32, target_size=128):
-    train_data_module = TrainDataModule(
-        split_dir=image_dir,
-        target_size=target_size,
-        batch_size=batch_size,
-        input_transform=transforms.Compose([
-#                               transforms.ToTensor(),
-                              dataloaderDenoise.AddNoise("gaussian", var=variance)
-                              ]), 
-        )    
 
-    train_dataset = train_data_module.train_dataloader().dataset
-    noisy_dataset = train_data_module.noisy_train_dataloader().dataset
-#     val_dataset = train_data_module.val_dataloader().dataset
+# def load_fastmri(image_dir, noise_type="gaussian", variance=0.01, dynamic_range=255, batch_size=32, target_size=128):
+#     train_data_module = TrainDataModule(
+#         split_dir=image_dir,
+#         target_size=target_size,
+#         batch_size=batch_size,
+#         input_transform=transforms.Compose([
+# #                               transforms.ToTensor(),
+#                               dataloaderDenoise.AddNoise("gaussian", var=variance)
+#                               ]), 
+#         )    
 
-    return train_dataset, noisy_dataset
+#     train_dataset = train_data_module.train_dataloader().dataset
+#     noisy_dataset = train_data_module.noisy_train_dataloader().dataset
+# #     val_dataset = train_data_module.val_dataloader().dataset
+
+#     return train_dataset, noisy_dataset
 
 
-# ixi dataset
+
 def load_ixi(image_dir, noise_type="gaussian", variance=0.01, dynamic_range=255, batch_size=32, target_size=128):
     train_data_module = TrainIXIDataModule(
         split_dir=image_dir,
@@ -126,6 +133,18 @@ class CombinedDataset(torch.utils.data.Dataset):
     
     def __len__(self):
         return min(len(self.cond_dataset), len(self.prior_dataset))
+    
+def random_split_dataset(dataset, tvt_ratio=[0.8,0.1,0.1]):
+    dataset_size = len(dataset)
+    # Define the sizes for train, validation, and test sets
+    train_size = int(tvt_ratio[0] * dataset_size)  # 80% for training
+    val_size = int(tvt_ratio[1] * dataset_size)   # 10% for validation
+    test_size = dataset_size - train_size - val_size  # Remaining 10% for testing
+
+    # Perform the random split
+    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
+
+    return train_dataset, val_dataset, test_dataset 
 
 def split_dataset(dataset, tvt_ratio=[0.8,0.1,0.1]):
     dataset_size = len(dataset)
